@@ -1,7 +1,6 @@
 A try to make a Map app
 
 Map panning is not present on other apps, but it is the main reason why I am making this app!
-Supported only on Android for now
 
 ## Core Features
 

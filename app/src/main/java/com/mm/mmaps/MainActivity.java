@@ -8,8 +8,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
@@ -20,90 +20,90 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 public class MainActivity extends FragmentActivity
-        implements OnMapReadyCallback, LocationListener, SensorEventListener {
+        implements OnMapReadyCallback, SensorEventListener {
 
     private static final String TAG = "Map";
     private GoogleMap mMap;
+
     private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
+    private LocationRequest locationRequest;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-
-    private Sensor magnetometer;
-    private Sensor accelerometer;
-
-    Location oldLocation;
-    Location location;
-
-    // 1. Get the Sensor Manager
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+                .setMinUpdateIntervalMillis(2000)
+                .build();
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (Location newLocation : locationResult.getLocations()) {
+                    Log.i(TAG, "Lat: " + newLocation.getLatitude() + ", Lng: " + newLocation.getLongitude());
+                    LatLng currentLatLng = new LatLng(newLocation.getLatitude(), newLocation.getLongitude());
+                    float gpsBearing = newLocation.getBearing();
+                    updateThirdPersonCamera(mMap, currentLatLng, gpsBearing);
+                }
+            }
+        };
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        if (mapFragment != null)
+        if (mapFragment != null) {
             mapFragment.getMapAsync(this);
+        }
 
         SensorManager sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        // 2. Access the hardware sensors
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     public void updateThirdPersonCamera(GoogleMap googleMap, LatLng currentUserLocation, float currentHeading) {
-        // Build the 3D perspective camera position
+        float zoom = mMap.getCameraPosition().zoom;
         CameraPosition thirdPersonPosition = new CameraPosition.Builder()
-                .target(currentUserLocation) // The current latitude and longitude of the user/vehicle
-                .zoom(18f)                   // High zoom level for close-up detail
-                .tilt(65f)                   // Pitch the camera (0 = top-down flat, 90 = horizon)
-                .bearing(currentHeading)     // Rotate the map based on user's compass heading (0 to 360)
+                .target(currentUserLocation)
+                .zoom(zoom)
+                .tilt(80f)
+                .bearing(currentHeading)
                 .build();
 
-        // Smoothly animate the camera to the new position
         googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(thirdPersonPosition), 1000, null);
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // You can leave this completely empty.
-        // It just needs to exist to satisfy the interface compiler contract.
     }
 
-    // 4. Handle updates
     @Override
     public void onSensorChanged(SensorEvent event) {
         CompassView compassView = findViewById(R.id.compassView);
 
         if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             float bearing = event.values[0];
-            compassView.setBearing(bearing);
-
-            if (mMap != null) {
-                if (location != null) {
-                    Log.i(TAG,"Third Person Camera Updated");
-                    LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f));
-                    updateThirdPersonCamera(mMap, currentLatLng, bearing);
-                }
+            if (compassView != null) {
+                compassView.setBearing(bearing);
             }
         }
     }
@@ -111,48 +111,37 @@ public class MainActivity extends FragmentActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        // Check and request location permissions
         enableUserLocation();
-
-        // Enable default zoom buttons (+ and -) provided by Google Maps
         mMap.getUiSettings().setZoomControlsEnabled(true);
-        /*
-        // Find compass and pan buttons as before
-        CompassView compassView = findViewById(R.id.compassView);
-        mMap.setOnCameraMoveListener(() -> {
-            float bearing = mMap.getCameraPosition().bearing;
-            compassView.setBearing(bearing);
-        });
-         */
-
-        // Optional: Setup your pan buttons here
         setupPanButtons();
     }
 
-    @Override
-    public void onLocationChanged(Location newLocation) {
-        Log.i(TAG,"Location Changed");
-    }
-
     private void enableUserLocation() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
 
-            // Permission is already granted: turn on the blue location dot layer & my location button
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setMyLocationButtonEnabled(true);
 
-            // Zoom camera directly to the user's current last known location
-            fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                @Override
-                public void onSuccess(Location newLocation) {
-                    location = newLocation;
-                }
-            });
+            // Start location updates ONLY after permission is confirmed
+            fusedLocationClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    Looper.getMainLooper()
+            );
+
+            fusedLocationClient.getLastLocation().addOnSuccessListener(this, newLocation -> {
+                        if (newLocation != null) {
+                            LatLng currentLatLng = new LatLng(newLocation.getLatitude(), newLocation.getLongitude());
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f),
+                                    1000, null);
+                        }
+                    }
+            );
 
         } else {
-            // Request permission from the user
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
@@ -164,7 +153,6 @@ public class MainActivity extends FragmentActivity
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, enable location layer safely
                 enableUserLocation();
             } else {
                 Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
