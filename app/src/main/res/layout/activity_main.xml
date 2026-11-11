@@ -7,21 +7,80 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+
+    <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".MainActivity" />
+        tools:context=".MainActivity"
+        tools:layout_editor_absoluteX="16dp"
+        tools:layout_editor_absoluteY="74dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
+    <!-- COD-Style Compass Top Bar -->
+    <com.mm.mmaps.CompassView
+        android:id="@+id/compassView"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/btnPanUp"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#FFFFFF"
+        android:text="︿"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="@+id/map"
+        app:layout_constraintTop_toTopOf="@+id/map"
+        app:layout_constraintVertical_bias="0.036" />
+
+    <Button
+        android:id="@+id/btnPanLeft"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#FFFFFF"
+        android:text="〈"
+        app:layout_constraintBottom_toBottomOf="@+id/btnPanDown"
+        app:layout_constraintEnd_toEndOf="@+id/map"
+        app:layout_constraintHorizontal_bias="0.045"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@+id/map"
+        app:layout_constraintVertical_bias="0.511" />
+
+    <Button
+        android:id="@+id/btnPanRight"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#FFFFFF"
+        android:text="〉"
+        app:layout_constraintBottom_toBottomOf="@+id/map"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.954"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.499" />
+
+    <Button
+        android:id="@+id/btnPanDown"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#FFFFFF"
+        android:text="﹀"
+        app:layout_constraintBottom_toBottomOf="@+id/map"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/map"
+        app:layout_constraintVertical_bias="0.976" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
